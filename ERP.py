@@ -81,7 +81,7 @@ from keras import backend as K
 # PyRiemann imports
 from pyriemann.estimation import XdawnCovariances
 from pyriemann.tangentspace import TangentSpace
-from pyriemann.utils.viz import plot_confusion_matrix
+# from pyriemann.utils.viz import plot_confusion_matrix
 from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LogisticRegression
 
@@ -93,11 +93,11 @@ from matplotlib import pyplot as plt
 K.set_image_data_format('channels_last')
 
 ##################### Process, filter and epoch the data ######################
-data_path = sample.data_path()
+# data_path = sample.data_path()
 
 # Set parameters and read data
-raw_fname = data_path + '/MEG/sample/sample_audvis_filt-0-40_raw.fif'
-event_fname = data_path + '/MEG/sample/sample_audvis_filt-0-40_raw-eve.fif'
+raw_fname = '/home/matthys/mne_data/MNE-sample-data/MEG/sample/sample_audvis_filt-0-40_raw.fif'
+event_fname = '/home/matthys/mne_data/MNE-sample-data/MEG/sample/sample_audvis_filt-0-40_raw-eve.fif'
 tmin, tmax = -0., 1
 event_id = dict(aud_l=1, aud_r=2, vis_l=3, vis_r=4)
 
@@ -113,7 +113,19 @@ picks = mne.pick_types(raw.info, meg=False, eeg=True, stim=False, eog=False,
 # Read epochs
 epochs = mne.Epochs(raw, events, event_id, tmin, tmax, proj=False,
                     picks=picks, baseline=None, preload=True, verbose=False)
+
+# plot the epochs to get an idea of the data
+epochs.plot(title='ERP images')
+print(epochs)
+print(len(epochs))
+plt.show()
+
 labels = epochs.events[:, -1]
+print(labels)
+
+# print the shape of the epochs and labels
+print("Shape of data: ", epochs.get_data().shape)
+print("Shape of labels: ", labels.shape)
 
 # extract raw data. scale by 1000 due to scaling sensitivity in deep learning
 X = epochs.get_data()*1000 # format is in (trials, channels, samples)
