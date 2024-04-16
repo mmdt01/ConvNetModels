@@ -17,6 +17,8 @@ from EEGModels import EEGNet
 from keras import utils as np_utils
 from keras.callbacks import ModelCheckpoint
 from keras import backend as K
+from sklearn.model_selection import KFold
+import numpy as np
 
 # tools for plotting confusion matrices
 from matplotlib import pyplot as plt
@@ -47,24 +49,23 @@ event_dict = {
 events, event_ids = mne.events_from_annotations(raw, event_id=event_dict)
 
 # extract epochs from the raw data
-epochs = mne.Epochs(raw, events, event_id=[3,4,5,6], tmin=0, tmax=3, baseline=None, preload=True)
+epochs = mne.Epochs(raw, events, event_id=[3,4], tmin=0, tmax=3, baseline=None, preload=True)
 
 # shuffle the epochs
 permutation = np.random.permutation(len(epochs))
+
 epochs = epochs[permutation]
 
 # plot the epochs
 epochs.plot(n_channels=16, scalings={"eeg": 20}, title="Epochs", n_epochs=5, events=True)
+print(epochs)
+print(len(epochs))
 plt.show()
 print(epochs.drop_log) 
 
-# extract labels from the epochs
-labels = epochs.events[:, -1]
+# extract and normalize the labels ensuring they start from 1
+labels = epochs.events[:, -1] - min(epochs.events[:, -1]) + 1
 print(labels)
-
-# print the shape of the epochs and labels
-print("Shape of data: ", epochs.get_data().shape)
-print("Shape of labels: ", labels.shape)
 
 # extract raw data. scale by 1000 due to scaling sensitivity in deep learning
 X = epochs.get_data()*1000 # format is in (trials, channels, samples)
@@ -72,20 +73,22 @@ y = labels
 
 # print the shape of the epochs and labels
 print("Shape of data: ", X.shape)
+print("Number of samples: ", X.shape[2])
 print("Shape of labels: ", y.shape)
 
 # change this so that it is automatically calculated!
 kernels = 1
-chans = 64
-samples = 751
+chans = X.shape[1] # 64
+samples = X.shape[2] # 751
 
 # take 50/25/25 percent of the data to train/validate/test
-X_train = X[0:300,]
-Y_train = y[0:300]
-X_validate = X[300:450,]
-Y_validate = y[300:450]
-X_test = X[450:,]
-Y_test = y[450:]
+epoch_length = len(X)
+X_train = X[0:int(epoch_length*0.7),]
+Y_train = y[0:int(epoch_length*0.7)]
+X_validate = X[int(epoch_length*0.7):int(epoch_length*0.85),]
+Y_validate = y[int(epoch_length*0.7):int(epoch_length*0.85)]
+X_test = X[int(epoch_length*0.85):,]
+Y_test = y[int(epoch_length*0.85):]
 
 ############################# EEGNet portion ##################################
 
@@ -106,13 +109,13 @@ print(X_test.shape[0], 'test samples')
 
 # configure the EEGNet-8,2,16 model with kernel length of 32 samples (other 
 # model configurations may do better, but this is a good starting point)
-model = EEGNet(nb_classes = 4, Chans = chans, Samples = samples, 
-               dropoutRate = 0.5, kernLength = 32, F1 = 8, D = 2, F2 = 16, 
+model = EEGNet(nb_classes = 2, Chans = chans, Samples = samples, 
+               dropoutRate = 0.5, kernLength = 125, F1 = 8, D = 2, F2 = 16, 
                dropoutType = 'Dropout')
 
 # compile the model and set the optimizers
 model.compile(
-    loss='categorical_crossentropy', 
+    loss='binary_crossentropy', 
     optimizer='adam', 
     metrics = ['accuracy']
 )
@@ -120,16 +123,17 @@ model.compile(
 # count number of parameters in the model
 numParams    = model.count_params()    
 
-# # set a valid path for your system to record model checkpoints
-# checkpointer = ModelCheckpoint(filepath='/tmp/checkpoint.h5', verbose=1,
-#                                save_best_only=True)
+# set a valid path for your system to record model checkpoints
+checkpointer = ModelCheckpoint(filepath='/tmp/checkpoint.h5', verbose=1,
+                               save_best_only=True)
 
 # fit the model
 fittedModel = model.fit(X_train, Y_train, batch_size = 16, epochs = 300, 
-                        verbose = 2, validation_data=(X_validate, Y_validate))
+                        verbose = 2, validation_data=(X_validate, Y_validate),
+                        callbacks=[checkpointer])
 
-# # load optimal weights
-# model.load_weights('/tmp/checkpoint.h5')
+# load optimal weights
+model.load_weights('/tmp/checkpoint.h5')
 
 # make prediction on test set
 probs       = model.predict(X_test)

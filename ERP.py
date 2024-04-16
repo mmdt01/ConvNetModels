@@ -103,6 +103,11 @@ event_id = dict(aud_l=1, aud_r=2, vis_l=3, vis_r=4)
 
 # Setup for reading the raw data
 raw = io.Raw(raw_fname, preload=True, verbose=False)
+
+# find samling frequency
+fs = raw.info['sfreq']
+print("sample frequency: ", fs)
+
 raw.filter(2, None, method='iir')  # replace baselining with high-pass
 events = mne.read_events(event_fname)
 
