@@ -9,9 +9,8 @@ from mne import io
 from sklearn.model_selection import KFold
 import numpy as np
 from matplotlib import pyplot as plt
-# EEGNet-specific imports
 from tensorflow import keras
-from EEGModels import EEGNet
+from EEGModels import EEGNet, DeepConvNet, ShallowConvNet
 from keras import utils as np_utils
 from keras.callbacks import ModelCheckpoint
 from keras import backend as K
@@ -63,9 +62,9 @@ def prepare_data(data_path, file_name, event_dict, class_labels, tmin, tmax):
     # extract epochs from the raw data
     epochs = mne.Epochs(raw, events, event_id=class_labels, tmin=tmin, tmax=tmax, baseline=None, preload=True)
     # plot the epochs (optional)
-    epochs.plot(n_channels=16, scalings={"eeg": 20}, title="Epochs", n_epochs=5, events=True)
-    print(epochs)
-    plt.show()
+    # epochs.plot(n_channels=16, scalings={"eeg": 20}, title="Epochs", n_epochs=5, events=True)
+    # print(epochs)
+    # plt.show()
     # extract and normalize the labels ensuring they start from 1
     labels = epochs.events[:, -1] - min(epochs.events[:, -1]) + 1
     # extract raw data. scale by 1000 due to scaling sensitivity in deep learning
@@ -89,7 +88,7 @@ def prepare_data(data_path, file_name, event_dict, class_labels, tmin, tmax):
     return X, y, chans, samples
 
 # function for training the model and performing k-fold cross validation
-def k_fold_cross_validation(X, y, chans, samples, num_folds, network):
+def k_fold_cross_validation(X, y, chans, samples, num_folds, network, task):
 
     # Define per-fold score containers
     acc_per_fold = []
@@ -106,6 +105,17 @@ def k_fold_cross_validation(X, y, chans, samples, num_folds, network):
             model = EEGNet(nb_classes = 2, Chans = chans, Samples = samples,
                             dropoutRate = 0.5, kernLength = 125, F1 = 8, D = 2, F2 = 16,
                             dropoutType = 'Dropout')
+        elif network == 'DeepConvNet':
+            # configure the DeepConvNet model
+            model = DeepConvNet(nb_classes = 2, Chans = chans, Samples = samples,
+                                dropoutRate = 0.5)
+        elif network == 'ShallowConvNet':
+            # configure the ShallowConvNet model
+            model = ShallowConvNet(nb_classes = 2, Chans = chans, Samples = samples,
+                                   dropoutRate = 0.5)
+        else:
+            print('Invalid network type!')
+            return
         # compile the model and set the optimizers
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics = ['accuracy', f1_m, precision_m, recall_m])
         # Generate a print
@@ -125,7 +135,7 @@ def k_fold_cross_validation(X, y, chans, samples, num_folds, network):
         # Increase fold number
         fold_no = fold_no + 1
 
-    # == Provide average scores == (WRITE THIS TO A TXT FILE LATER)
+    # == Provide average scores ==
     print('------------------------------------------------------------------------')
     print('Score per fold')
     for i in range(0, len(acc_per_fold)):
@@ -137,10 +147,36 @@ def k_fold_cross_validation(X, y, chans, samples, num_folds, network):
     print(f'> Loss: {np.mean(loss_per_fold)}')
     print(f'> F1-Score: {np.mean(f1_per_fold)}')
     print('------------------------------------------------------------------------')
+    # write the results to a file in the results folder
+    with open(f"results/s4_{network}_results_{task}.txt", "w") as f:
+        f.write('------------------------------------------------------------------------\n')
+        f.write('Score per fold\n')
+        for i in range(0, len(acc_per_fold)):
+            f.write('------------------------------------------------------------------------\n')
+            f.write(f'> Fold {i+1} - Loss: {loss_per_fold[i]} - Accuracy: {acc_per_fold[i]}% - F1-Score: {f1_per_fold[i]}\n')
+        f.write('------------------------------------------------------------------------\n')
+        f.write('Average scores for all folds:\n')
+        f.write(f'> Accuracy: {np.mean(acc_per_fold)}% (+- {np.std(acc_per_fold)})\n')
+        f.write(f'> Loss: {np.mean(loss_per_fold)}\n')
+        f.write(f'> F1-Score: {np.mean(f1_per_fold)}\n')
+        f.write('------------------------------------------------------------------------\n')
 
 ##################### Run the code #####################
 
-num_folds = 5
-X, y, chans, samples = prepare_data(data_path, file_name, event_dict, class_labels=[5,6], tmin=0, tmax=3)
-k_fold_cross_validation(X, y, chans, samples, num_folds, 'EEGNet')
+num_folds = 10
 
+# DeepConvNet
+
+X, y, chans, samples = prepare_data(data_path, file_name, event_dict, class_labels=[1,2], tmin=0, tmax=3)
+k_fold_cross_validation(X, y, chans, samples, num_folds, 'DeepConvNet', 'motor-execution')
+
+X, y, chans, samples = prepare_data(data_path, file_name, event_dict, class_labels=[3,4], tmin=0, tmax=3)
+k_fold_cross_validation(X, y, chans, samples, num_folds, 'DeepConvNet', 'perception')
+
+X, y, chans, samples = prepare_data(data_path, file_name, event_dict, class_labels=[5,6], tmin=0, tmax=3)
+k_fold_cross_validation(X, y, chans, samples, num_folds, 'DeepConvNet', 'imagery')
+
+X, y, chans, samples = prepare_data(data_path, file_name, event_dict, class_labels=[7,8], tmin=0, tmax=3)
+k_fold_cross_validation(X, y, chans, samples, num_folds, 'DeepConvNet', 'imagery-perception') 
+
+# epochs=40 gave very slightly better accuracy than 100 epochs for imagery task with DeepConvNet
