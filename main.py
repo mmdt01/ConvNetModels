@@ -53,7 +53,6 @@ epochs = mne.Epochs(raw, events, event_id=[3,4], tmin=0, tmax=3, baseline=None, 
 
 # shuffle the epochs
 permutation = np.random.permutation(len(epochs))
-
 epochs = epochs[permutation]
 
 # plot the epochs
