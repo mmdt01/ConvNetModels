@@ -18,8 +18,9 @@ from keras import backend as K
 ##################### Load and epoch data #####################
 
 # define data path
-data_path = "subject_4"
-file_name = "s4_preprocessed.fif"
+subject = 1
+data_path = f"subject_{subject}"
+file_name = f"s{subject}_preprocessed.fif"
 
 # create an event dictionary
 event_dict = {
@@ -62,9 +63,9 @@ def prepare_data(data_path, file_name, event_dict, class_labels, tmin, tmax):
     # extract epochs from the raw data
     epochs = mne.Epochs(raw, events, event_id=class_labels, tmin=tmin, tmax=tmax, baseline=None, preload=True)
     # plot the epochs (optional)
-    # epochs.plot(n_channels=16, scalings={"eeg": 20}, title="Epochs", n_epochs=5, events=True)
-    # print(epochs)
-    # plt.show()
+    epochs.plot(n_channels=16, scalings={"eeg": 20}, title="Epochs", n_epochs=5, events=True)
+    print(epochs)
+    plt.show()
     # extract and normalize the labels ensuring they start from 1
     labels = epochs.events[:, -1] - min(epochs.events[:, -1]) + 1
     # extract raw data. scale by 1000 due to scaling sensitivity in deep learning
@@ -124,7 +125,7 @@ def k_fold_cross_validation(X, y, chans, samples, num_folds, network, task):
         # Fit data to model
         history = model.fit(X[train], y[train],
                             batch_size=16,
-                            epochs=100,
+                            epochs=10,
                             verbose=2)
         # Generate generalization metrics
         scores = model.evaluate(X[test], y[test], verbose=0)
@@ -148,7 +149,7 @@ def k_fold_cross_validation(X, y, chans, samples, num_folds, network, task):
     print(f'> F1-Score: {np.mean(f1_per_fold)}')
     print('------------------------------------------------------------------------')
     # write the results to a file in the results folder
-    with open(f"results/s4_{network}_results_{task}.txt", "w") as f:
+    with open(f"results/s{subject}_{network}_results_{task}.txt", "w") as f:
         f.write('------------------------------------------------------------------------\n')
         f.write('Score per fold\n')
         for i in range(0, len(acc_per_fold)):
@@ -163,20 +164,43 @@ def k_fold_cross_validation(X, y, chans, samples, num_folds, network, task):
 
 ##################### Run the code #####################
 
-num_folds = 10
-
-# DeepConvNet
-
-X, y, chans, samples = prepare_data(data_path, file_name, event_dict, class_labels=[1,2], tmin=0, tmax=3)
-k_fold_cross_validation(X, y, chans, samples, num_folds, 'DeepConvNet', 'motor-execution')
-
-X, y, chans, samples = prepare_data(data_path, file_name, event_dict, class_labels=[3,4], tmin=0, tmax=3)
-k_fold_cross_validation(X, y, chans, samples, num_folds, 'DeepConvNet', 'perception')
-
-X, y, chans, samples = prepare_data(data_path, file_name, event_dict, class_labels=[5,6], tmin=0, tmax=3)
-k_fold_cross_validation(X, y, chans, samples, num_folds, 'DeepConvNet', 'imagery')
-
-X, y, chans, samples = prepare_data(data_path, file_name, event_dict, class_labels=[7,8], tmin=0, tmax=3)
-k_fold_cross_validation(X, y, chans, samples, num_folds, 'DeepConvNet', 'imagery-perception') 
+num_folds = 5
 
 # epochs=40 gave very slightly better accuracy than 100 epochs for imagery task with DeepConvNet
+
+# Training and test procedure for all experiments per subject:
+
+# 1. Load the preprocessed data and extract epochs for each task:
+#       - Manually check epochs and remove any bad epochs
+#       - (Everything from now onwards is automated...)
+# 2. For each classification task, train the model using k-fold cross validation and evaluate performance with:
+#       - DeepConvNet
+#       - ShallowConvNet
+#       - EEGNet
+# 3. Save the results to a file in the results folder
+# 4. Repeat for each subject
+
+# 1. Load the preprocessed data and extract epochs for each task:
+X_1, y_1, chans_1, samples_1 = prepare_data(data_path, file_name, event_dict, class_labels=[1,2], tmin=0, tmax=3)
+X_2, y_2, chans_2, samples_2 = prepare_data(data_path, file_name, event_dict, class_labels=[3,4], tmin=0, tmax=3)
+X_3, y_3, chans_3, samples_3 = prepare_data(data_path, file_name, event_dict, class_labels=[5,6], tmin=0, tmax=3)
+X_4, y_4, chans_4, samples_4 = prepare_data(data_path, file_name, event_dict, class_labels=[7,8], tmin=0, tmax=3)
+
+# 2. For each classification task, train the model using k-fold cross validation and evaluate performance with:
+k_fold_cross_validation(X_1, y_1, chans_1, samples_1, num_folds, 'DeepConvNet', 'motor-execution')
+k_fold_cross_validation(X_2, y_2, chans_2, samples_2, num_folds, 'DeepConvNet', 'perception')
+k_fold_cross_validation(X_3, y_3, chans_3, samples_3, num_folds, 'DeepConvNet', 'imagery')
+k_fold_cross_validation(X_4, y_4, chans_4, samples_4, num_folds, 'DeepConvNet', 'imagery-perception')
+
+k_fold_cross_validation(X_1, y_1, chans_1, samples_1, num_folds, 'ShallowConvNet', 'motor-execution')
+k_fold_cross_validation(X_2, y_2, chans_2, samples_2, num_folds, 'ShallowConvNet', 'perception')
+k_fold_cross_validation(X_3, y_3, chans_3, samples_3, num_folds, 'ShallowConvNet', 'imagery')
+k_fold_cross_validation(X_4, y_4, chans_4, samples_4, num_folds, 'ShallowConvNet', 'imagery-perception')
+
+k_fold_cross_validation(X_1, y_1, chans_1, samples_1, num_folds, 'EEGNet', 'motor-execution')
+k_fold_cross_validation(X_2, y_2, chans_2, samples_2, num_folds, 'EEGNet', 'perception')
+k_fold_cross_validation(X_3, y_3, chans_3, samples_3, num_folds, 'EEGNet', 'imagery')
+k_fold_cross_validation(X_4, y_4, chans_4, samples_4, num_folds, 'EEGNet', 'imagery-perception')
+
+
+
