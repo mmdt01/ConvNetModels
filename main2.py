@@ -125,7 +125,7 @@ def k_fold_cross_validation(X, y, chans, samples, num_folds, network, task):
         # Fit data to model
         history = model.fit(X[train], y[train],
                             batch_size=16,
-                            epochs=10,
+                            epochs=60,
                             verbose=2)
         # Generate generalization metrics
         scores = model.evaluate(X[test], y[test], verbose=0)
@@ -164,7 +164,7 @@ def k_fold_cross_validation(X, y, chans, samples, num_folds, network, task):
 
 ##################### Run the code #####################
 
-num_folds = 5
+num_folds = 10
 
 # epochs=40 gave very slightly better accuracy than 100 epochs for imagery task with DeepConvNet
 
