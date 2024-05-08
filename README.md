@@ -149,24 +149,5 @@ url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/hbm.23730}
 }
 ```
 
-# Legal Disclaimer
-
-This project is governed by the terms of the Creative Commons Zero 1.0 Universal (CC0 1.0) Public Domain Dedication (the Agreement). You should have received a copy of the Agreement with a copy of this software. If not, see https://github.com/USArmyResearchLab/ARLDCCSO. Your use or distribution of ARL EEGModels, in both source and binary form, in whole or in part, implies your agreement to abide by the terms set forth in the Agreement in full. 
- 
-Other portions of this project are subject to domestic copyright protection under 17 USC Sec. 105.  Those portions are licensed under the Apache 2.0 license.  The complete text of the license governing this material is in the file labeled LICENSE.TXT that is a part of this project's official distribution. 
-
-arl-eegmodels is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
-
-You may find the full license in the file LICENSE in this directory.
-
-# Contributions
-
-Due to legal issues, every contributor will need to have a signed Contributor License Agreement on file. The ARL Contributor License Agreement (ARL Form 266) can be found [here](https://github.com/USArmyResearchLab/ARL-Open-Source-Guidance-and-Instructions/blob/master/ARL%20Form%20-%20266.pdf). 
-
-Each external contributor must execute and return a copy for each project that he or she intends to contribute to. 
-
-Once ARL receives the executed form, it will remain in force permanently. 
-
-Thus, external contributors need only execute the form once for each project that they plan on contributing to.
 
 
